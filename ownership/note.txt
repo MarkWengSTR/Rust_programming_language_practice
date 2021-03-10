@@ -1,0 +1,119 @@
+// https://rust-lang.tw/book-tw/ch04-01-what-is-ownership.html
+// 所有權規則
+// - Rust 中每個數值都有一個變數作為擁有者(owner)
+// - 同時間只有一個擁有者
+// - 擁有者離開作用域時，數值就被丟棄
+
+// s 此處無效，因為還沒宣告
+// fn main() {
+    // // let s = "hello"; // s 在此開始有效
+
+    // let mut s = String::from("hello"); // s 在此開始有效，要用String才可以被push_str加值
+    
+    // s.push_str(", world!"); // push_str() 將字面加到字串後方
+
+    // println!("{}", s); // 這會印出"Hello world"
+    // let s1 = String::from("hello");
+    // let s2 = s1;
+
+    // println!("{}, world", s1);
+
+    // let s1 = String::from("hello");
+    // let s2 = s1.clone();
+
+    // println!("s1 = {}, s2 = {}", s1, s2);
+    
+    // let s1 = String::from("hello");
+
+    // take_ownership(s1); // s1 進入函式，已經被move了，此後s1無效
+
+    // println!("s1 = {}", s1); // 錯誤:s1無效
+// }
+// 作用域結束，s不再有效
+
+// 記憶體與分配
+// 為何字面值 "hello" 不可變，而String卻可變?
+//   字面值的話，因為編譯的時候，就知道它的內容，因此可直接寫死在最終執行檔，因此字面值非常迅速且高效的特性，源自於字面值的不可變性
+//   而對於Sting型別，為了支援可變性，需要在堆積(heap)上分配一塊編譯時未知大小的記憶體，這也代表兩件事情
+//   1. 記憶體分配器必須在執行時請求記憶體
+//   2. 當不再需要String時，需要將記憶體還給分配器
+// 上述1.的部分，所有語言應該都一樣，但2.就不同了，擁有GC(garbage collector)的語言中，GC會追蹤並清理不再使用的記憶體，
+// 而沒有GC的話，釋放記憶體就是我們的責任了，太早釋放可能會拿到無效的變數，釋放兩次可能會造成程式錯誤，因此必須準確無誤的配對。
+//
+// Rust
+// 當變數離開作用域時，Rust會幫我們呼叫一個特殊函式叫做drop，
+// 的機制是在記憶體擁有的變數離開作用域時，就自動釋放，當變數離開作用域時，Rust會幫我們呼叫一個特殊函式叫做drop (c++ 叫做 RAII)，
+// 雖然看起來很簡單，但當情況較複雜時，程式的刑為可能會較難預測，像是我們需要很多變數，所以得在堆積上分配它們的情況，以下來探討一下
+// 來看看兩個程式碼
+// fn string_as() {
+//     let x = 5;
+//     let y = x;
+// }
+
+// fn string_as_from_strtype() {
+//     let s1 = String::from("hello");
+//     let s2 = s1;
+// }
+
+// 看起來很像，但實際上完全不同，第一個y就是單純x的拷貝，但第二個s1的記憶體結構會被
+// "move"去s2，rust會複製一個s1相同的記憶體指標給s2，且把s1無效化，如果執行的話，是會編譯錯誤的。
+
+// fn take_ownership(some_sting:String) {
+//     println!("{}", some_sting);
+// }
+
+fn main() {
+    let s1 = String::from("hello");
+
+    let len = calculate_length(&s1);
+
+    println!("'{}'的長度為 {}", s1, len);
+}
+
+fn calculate_length(s: &String) -> usize {
+    s.len()
+}
+// 可變引用
+fn main() {
+    let mut s1 = String::from("hello");
+
+    change(&mut s1);
+
+    println!("{}", s1);
+}
+
+fn change(s: &mut String) {
+    s.push_str(", world");
+}
+// 同一個作用域不可有兩種可變引用
+fn main() {
+    let mut s1 = String::from("hello");
+
+    let r1 = &mut s1;
+
+    let r2 = &mut s1;
+
+    println!("{} {}", r1, r2);
+}
+
+fn main() {
+    let mut s = String::from("hello");
+
+    let r1 = &s;
+
+    let r2 = &s;
+    println!("{} and {}", r1, r2);
+
+    let r3 = &mut s;
+    println!("{}", r3);
+}
+// 迷途引用
+fn main() {
+    let reference_to_nothing = dangle();
+}
+
+fn dangle() -> &String {
+    let s = String::from("hello");
+
+    &s
+} // 不要用引用就好
